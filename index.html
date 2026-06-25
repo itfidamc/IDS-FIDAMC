@@ -73,6 +73,16 @@
   .pdf-card-top span{ font-size:13px; color:var(--navy); font-weight:500; }
   .pdf-card-top a{ font-size:12px; color:var(--teal-dark); text-decoration:none; font-weight:500; }
 
+  /* En pantallas anchas (tablet/desktop), el visor de PDF rompe el ancho máximo
+     del resto del formulario para aprovechar mejor el espacio disponible. */
+  @media (min-width: 760px){
+    .pdf-card{
+      width: min(94vw, 1000px);
+      margin-left: calc(50% - min(47vw, 500px));
+      margin-right: calc(50% - min(47vw, 500px));
+    }
+  }
+
   .pdfjs-toolbar{
     display:flex; align-items:center; justify-content:center; gap:10px;
     padding:8px 10px; background:#2a2f33; border-bottom:1px solid #1c2326;
@@ -87,7 +97,7 @@
   .pdfjs-toolbar .pageinfo{ color:#fff; font-size:13px; min-width:64px; text-align:center; }
 
   .pdfjs-viewport{
-    width:100%; max-height:70vh; overflow:auto; background:#525659;
+    width:100%; max-height:85vh; overflow:auto; background:#525659;
     display:flex; justify-content:center; padding:10px 0;
   }
   .pdfjs-viewport canvas{ box-shadow:0 1px 4px rgba(0,0,0,.4); }
@@ -268,7 +278,7 @@ async function pdfRenderPage(pageNum){
     const page = await pdfDocViewer.getPage(pageNum);
     const containerWidth = pdfViewport.clientWidth - 20;
     const baseViewport = page.getViewport({ scale: 1 });
-    const scale = Math.min(containerWidth / baseViewport.width, 2.5);
+    const scale = Math.min(containerWidth / baseViewport.width, 3);
     const viewport = page.getViewport({ scale: scale > 0 ? scale : 1 });
 
     let canvas = pdfViewport.querySelector('canvas');
@@ -302,6 +312,14 @@ pdfjsLib.getDocument({ data: pdfBytesOriginal.slice() }).promise.then((doc) => {
   pdfRenderPage(1);
 }).catch(() => {
   pdfStatus.textContent = 'No se ha podido cargar el documento. Usa "Abrir en pestaña".';
+});
+
+let pdfResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(pdfResizeTimer);
+  pdfResizeTimer = setTimeout(() => {
+    if(pdfDocViewer) pdfRenderPage(pdfCurrentPage);
+  }, 200);
 });
 
 function setFechaHoy(){
