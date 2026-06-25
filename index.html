@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --teal:#00AA9C;
@@ -71,7 +72,26 @@
   }
   .pdf-card-top span{ font-size:13px; color:var(--navy); font-weight:500; }
   .pdf-card-top a{ font-size:12px; color:var(--teal-dark); text-decoration:none; font-weight:500; }
-  iframe.pdfview{ width:100%; height:480px; border:none; display:block; }
+
+  .pdfjs-toolbar{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:8px 10px; background:#2a2f33; border-bottom:1px solid #1c2326;
+  }
+  .pdfjs-toolbar button{
+    background:#3c4347; border:none; color:#fff; width:30px; height:30px;
+    border-radius:6px; font-size:16px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pdfjs-toolbar button:disabled{ opacity:.35; cursor:default; }
+  .pdfjs-toolbar button:active:not(:disabled){ background:var(--teal-dark); }
+  .pdfjs-toolbar .pageinfo{ color:#fff; font-size:13px; min-width:64px; text-align:center; }
+
+  .pdfjs-viewport{
+    width:100%; max-height:70vh; overflow:auto; background:#525659;
+    display:flex; justify-content:center; padding:10px 0;
+  }
+  .pdfjs-viewport canvas{ box-shadow:0 1px 4px rgba(0,0,0,.4); }
+  .pdfjs-status{ color:#fff; font-size:13px; text-align:center; padding:20px 0; }
 
   .read-flag{
     display:flex; align-items:flex-start; gap:10px; padding:14px;
@@ -150,7 +170,14 @@
       <span>Documento completo (2 páginas)</span>
       <a href="#" id="openTab">Abrir en pestaña ↗</a>
     </div>
-    <iframe class="pdfview" id="pdfFrame" title="Instrucciones de seguridad FIDAMC para visitas"></iframe>
+    <div class="pdfjs-toolbar">
+      <button type="button" id="pdfPrev" aria-label="Página anterior">‹</button>
+      <span class="pageinfo"><span id="pdfPageNum">1</span> / <span id="pdfPageCount">…</span></span>
+      <button type="button" id="pdfNext" aria-label="Página siguiente">›</button>
+    </div>
+    <div class="pdfjs-viewport" id="pdfViewport">
+      <div class="pdfjs-status" id="pdfStatus">Cargando documento…</div>
+    </div>
     <label class="read-flag">
       <input type="checkbox" id="readCheck">
       <span>He leído y comprendido las Instrucciones de Seguridad y Confidencialidad para Personal de Visita, y me comprometo a cumplirlas en su totalidad.</span>
@@ -210,10 +237,71 @@ function base64ToBytes(base64){
 
 const pdfBytesOriginal = base64ToBytes(PDF_BASE64);
 const pdfBlobUrl = URL.createObjectURL(new Blob([pdfBytesOriginal], {type:'application/pdf'}));
-document.getElementById('pdfFrame').src = pdfBlobUrl;
 document.getElementById('openTab').addEventListener('click', (e) => {
   e.preventDefault();
   window.open(pdfBlobUrl, '_blank');
+});
+
+// --- Visor PDF.js (canvas), reemplaza al iframe nativo para que se vea igual en todos los dispositivos ---
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDocViewer = null;
+let pdfCurrentPage = 1;
+let pdfRendering = false;
+
+const pdfViewport = document.getElementById('pdfViewport');
+const pdfStatus = document.getElementById('pdfStatus');
+const pdfPageNumEl = document.getElementById('pdfPageNum');
+const pdfPageCountEl = document.getElementById('pdfPageCount');
+const pdfPrevBtn = document.getElementById('pdfPrev');
+const pdfNextBtn = document.getElementById('pdfNext');
+
+function pdfUpdateButtons(){
+  pdfPrevBtn.disabled = pdfCurrentPage <= 1;
+  pdfNextBtn.disabled = !pdfDocViewer || pdfCurrentPage >= pdfDocViewer.numPages;
+}
+
+async function pdfRenderPage(pageNum){
+  if(!pdfDocViewer || pdfRendering) return;
+  pdfRendering = true;
+  try{
+    const page = await pdfDocViewer.getPage(pageNum);
+    const containerWidth = pdfViewport.clientWidth - 20;
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(containerWidth / baseViewport.width, 2.5);
+    const viewport = page.getViewport({ scale: scale > 0 ? scale : 1 });
+
+    let canvas = pdfViewport.querySelector('canvas');
+    if(!canvas){
+      canvas = document.createElement('canvas');
+      pdfViewport.innerHTML = '';
+      pdfViewport.appendChild(canvas);
+    }
+    const context = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+
+    pdfCurrentPage = pageNum;
+    pdfPageNumEl.textContent = pageNum;
+    pdfUpdateButtons();
+  }catch(err){
+    pdfViewport.innerHTML = '<div class="pdfjs-status">No se ha podido mostrar el documento. Usa "Abrir en pestaña".</div>';
+  }finally{
+    pdfRendering = false;
+  }
+}
+
+pdfPrevBtn.addEventListener('click', () => { if(pdfCurrentPage > 1) pdfRenderPage(pdfCurrentPage - 1); });
+pdfNextBtn.addEventListener('click', () => { if(pdfDocViewer && pdfCurrentPage < pdfDocViewer.numPages) pdfRenderPage(pdfCurrentPage + 1); });
+
+pdfjsLib.getDocument({ data: pdfBytesOriginal.slice() }).promise.then((doc) => {
+  pdfDocViewer = doc;
+  pdfPageCountEl.textContent = doc.numPages;
+  pdfRenderPage(1);
+}).catch(() => {
+  pdfStatus.textContent = 'No se ha podido cargar el documento. Usa "Abrir en pestaña".';
 });
 
 function setFechaHoy(){
