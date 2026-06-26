@@ -204,6 +204,10 @@
       <input type="text" id="empresa" placeholder="Ej. Acme Ingeniería S.L." autocomplete="off">
     </div>
     <div class="field">
+      <label for="visitado">Persona a visitar *</label>
+      <input type="text" id="visitado" placeholder="Ej. Sergio Martínez" autocomplete="off" required>
+    </div>
+    <div class="field">
       <label for="fecha">Fecha</label>
       <input type="text" id="fecha" readonly>
     </div>
@@ -279,7 +283,13 @@ async function pdfRenderPage(pageNum){
     const containerWidth = pdfViewport.clientWidth - 20;
     const baseViewport = page.getViewport({ scale: 1 });
     const scale = Math.min(containerWidth / baseViewport.width, 3);
-    const viewport = page.getViewport({ scale: scale > 0 ? scale : 1 });
+    const cssViewport = page.getViewport({ scale: scale > 0 ? scale : 1 });
+
+    // Renderizamos a una resolución mayor (según la densidad de píxeles real
+    // de la pantalla) y luego mostramos el canvas más pequeño con CSS, para
+    // que el texto se vea nítido en tablets/móviles de alta densidad.
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+    const renderViewport = page.getViewport({ scale: (scale > 0 ? scale : 1) * pixelRatio });
 
     let canvas = pdfViewport.querySelector('canvas');
     if(!canvas){
@@ -288,10 +298,12 @@ async function pdfRenderPage(pageNum){
       pdfViewport.appendChild(canvas);
     }
     const context = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    canvas.width = renderViewport.width;
+    canvas.height = renderViewport.height;
+    canvas.style.width = cssViewport.width + 'px';
+    canvas.style.height = cssViewport.height + 'px';
 
-    await page.render({ canvasContext: context, viewport }).promise;
+    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
 
     pdfCurrentPage = pageNum;
     pdfPageNumEl.textContent = pageNum;
@@ -407,6 +419,7 @@ function setStatus(msg, kind){
 function resetForm(){
   document.getElementById('nombre').value = '';
   document.getElementById('empresa').value = '';
+  document.getElementById('visitado').value = '';
   setFechaHoy();
   document.getElementById('readCheck').checked = false;
   clearCanvas();
@@ -425,7 +438,7 @@ function slugify(str){
     .slice(0, 40) || 'sin_nombre';
 }
 
-async function generarPDFFinal(nombre, empresa, fechaStr, signatureDataUrl){
+async function generarPDFFinal(nombre, empresa, visitado, fechaStr, signatureDataUrl){
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
   const pdfDoc = await PDFDocument.load(pdfBytesOriginal);
@@ -478,6 +491,10 @@ async function generarPDFFinal(nombre, empresa, fechaStr, signatureDataUrl){
   page.drawText(empresa || '(no indicada)', { x: valueX, y, size: 11.5, font, color: inkColor });
   y -= 22;
 
+  page.drawText('Persona a visitar:', { x: labelX, y, size: 11.5, font: fontBold, color: navy });
+  page.drawText(visitado, { x: valueX, y, size: 11.5, font, color: inkColor });
+  y -= 22;
+
   page.drawText('Fecha:', { x: labelX, y, size: 11.5, font: fontBold, color: navy });
   page.drawText(fechaStr, { x: valueX, y, size: 11.5, font, color: inkColor });
   y -= 50;
@@ -504,10 +521,12 @@ async function generarPDFFinal(nombre, empresa, fechaStr, signatureDataUrl){
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const nombre = document.getElementById('nombre').value.trim();
   const empresa = document.getElementById('empresa').value.trim();
+  const visitado = document.getElementById('visitado').value.trim();
   const fechaStr = document.getElementById('fecha').value;
   const leido = document.getElementById('readCheck').checked;
 
   if(!nombre){ setStatus('Por favor, indique su nombre y apellidos.', 'err'); return; }
+  if(!visitado){ setStatus('Por favor, indique la persona a visitar.', 'err'); return; }
   if(!leido){ setStatus('Debe confirmar que ha leído el documento.', 'err'); return; }
   if(!hasSignature){ setStatus('Por favor, firme en el recuadro antes de continuar.', 'err'); return; }
 
@@ -516,7 +535,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
   try{
     const signatureDataUrl = canvas.toDataURL('image/png');
-    const pdfBytes = await generarPDFFinal(nombre, empresa, fechaStr, signatureDataUrl);
+    const pdfBytes = await generarPDFFinal(nombre, empresa, visitado, fechaStr, signatureDataUrl);
 
     const now = new Date();
     const ts = now.toISOString().replace(/[:.]/g,'-');
