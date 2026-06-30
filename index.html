@@ -169,7 +169,7 @@
 <div class="frame" id="frame">
   <div class="header-row">
     <img class="logo" id="logoImg" alt="FIDAMC">
-    <p class="eyebrow">FIDAMC · Acceso de personal interno</p>
+    <p class="eyebrow">FIDAMC · Acceso de visitas</p>
   </div>
 
   <h1>Instrucciones de seguridad, uso aceptable de sistemas de información y confidencialidad para personal interno</h1>
@@ -532,9 +532,18 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     const pdfBase64 = btoa(binary);
     const dataUrl = 'data:application/pdf;base64,' + pdfBase64;
 
+    // Intento de descarga real al sistema de archivos (carpeta Download),
+    // no apertura en visor. Mantenemos el <a> en el DOM unos instantes tras
+    // el click para dar tiempo al WebView a procesar el evento de descarga
+    // antes de eliminarlo (eliminarlo de inmediato puede cancelar la
+    // descarga en algunos WebView de apps kiosko).
     const a = document.createElement('a');
-    a.href = dataUrl; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.href = dataUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { a.remove(); }, 1000);
 
     document.getElementById('doneDetail').textContent = `Documento "${filename}" generado correctamente.`;
     document.getElementById('frame').classList.add('hidden');
