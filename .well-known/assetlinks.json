@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "fidamc.ids.es",
+    "sha256_cert_fingerprints": ["A3:4B:FC:30:7E:2D:F6:FF:95:A2:8A:28:9D:71:64:9B:0E:7B:C8:09:5D:6B:B6:DC:8A:6B:C4:C4:5F:39:74:A7"]
+  }
+}]
