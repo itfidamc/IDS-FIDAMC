@@ -206,6 +206,10 @@
       <input type="text" id="nombre" placeholder="Ej. Carlos Gómez" autocomplete="off">
     </div>
     <div class="field">
+      <label for="fi">FI *</label>
+      <input type="text" id="fi" placeholder="Ej. FI-001" autocomplete="off" required>
+    </div>
+    <div class="field">
       <label for="fecha">Fecha</label>
       <input type="text" id="fecha" readonly>
     </div>
@@ -241,6 +245,23 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
+
+// Wake Lock: mantiene la pantalla encendida mientras la app está activa.
+// Se reactiva automáticamente si el usuario vuelve a la app tras minimizarla.
+let wakeLock = null;
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {
+      // El sistema puede denegar el Wake Lock (batería baja, etc.), no es crítico.
+    }
+  }
+}
+requestWakeLock();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
 }
 
 const PDF_BASE64 = document.getElementById('pdfDataHolder').textContent.trim();
@@ -424,6 +445,7 @@ function setStatus(msg, kind){
 
 function resetForm(){
   document.getElementById('nombre').value = '';
+  document.getElementById('fi').value = '';
   setFechaHoy();
   document.getElementById('readCheck').checked = false;
   clearCanvas();
@@ -442,7 +464,7 @@ function slugify(str){
     .slice(0, 40) || 'sin_nombre';
 }
 
-async function generarPDFFinal(nombre, fechaStr, signatureDataUrl){
+async function generarPDFFinal(nombre, fi, fechaStr, signatureDataUrl){
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
   const pdfDoc = await PDFDocument.load(pdfBytesOriginal);
@@ -491,6 +513,10 @@ async function generarPDFFinal(nombre, fechaStr, signatureDataUrl){
   page.drawText(nombre, { x: valueX, y, size: 11.5, font, color: inkColor });
   y -= 22;
 
+  page.drawText('FI:', { x: labelX, y, size: 11.5, font: fontBold, color: navy });
+  page.drawText(fi, { x: valueX, y, size: 11.5, font, color: inkColor });
+  y -= 22;
+
   page.drawText('Fecha:', { x: labelX, y, size: 11.5, font: fontBold, color: navy });
   page.drawText(fechaStr, { x: valueX, y, size: 11.5, font, color: inkColor });
   y -= 50;
@@ -516,10 +542,12 @@ async function generarPDFFinal(nombre, fechaStr, signatureDataUrl){
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const nombre = document.getElementById('nombre').value.trim();
+  const fi = document.getElementById('fi').value.trim();
   const fechaStr = document.getElementById('fecha').value;
   const leido = document.getElementById('readCheck').checked;
 
   if(!nombre){ setStatus('Por favor, indique su nombre y apellidos.', 'err'); return; }
+  if(!fi){ setStatus('Por favor, indique el FI.', 'err'); return; }
   if(!leido){ setStatus('Debe confirmar que ha leído el documento.', 'err'); return; }
   if(!hasSignature){ setStatus('Por favor, firme en el recuadro antes de continuar.', 'err'); return; }
 
@@ -528,7 +556,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
   try{
     const signatureDataUrl = canvas.toDataURL('image/png');
-    const pdfBytes = await generarPDFFinal(nombre, fechaStr, signatureDataUrl);
+    const pdfBytes = await generarPDFFinal(nombre, fi, fechaStr, signatureDataUrl);
 
     const now = new Date();
     const ts = now.toISOString().replace(/[:.]/g,'-');
