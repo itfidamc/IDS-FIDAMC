@@ -175,7 +175,7 @@
 <div class="frame" id="frame">
   <div class="header-row">
     <img class="logo" id="logoImg" alt="FIDAMC">
-    <p class="eyebrow">FIDAMC · Personal Interno</p>
+    <p class="eyebrow">FIDAMC · Acceso de personal interno</p>
   </div>
 
   <h1>Instrucciones de seguridad, uso aceptable de sistemas de información y confidencialidad para personal interno</h1>
@@ -196,7 +196,7 @@
     </div>
     <label class="read-flag">
       <input type="checkbox" id="readCheck">
-      <span>He leído y comprendido las Instrucciones de Seguridad y Confidencialidad para Personal de Visita, y me comprometo a cumplirlas en su totalidad.</span>
+      <span>He leído y comprendido las Instrucciones de Seguridad, Uso Aceptable de Sistemas de Información y Confidencialidad para Personal Interno, y me comprometo a cumplirlas en su totalidad.</span>
     </label>
   </div>
 
@@ -206,7 +206,7 @@
       <input type="text" id="nombre" placeholder="Ej. Carlos Gómez" autocomplete="off">
     </div>
     <div class="field">
-      <label for="fi">FI</label>
+      <label for="fi">FI *</label>
       <input type="text" id="fi" placeholder="Ej. FI-001" autocomplete="off" required>
     </div>
     <div class="field">
@@ -495,8 +495,8 @@ async function generarPDFFinal(nombre, fi, fechaStr, signatureDataUrl){
 
   const declaracion = [
     'Declaro por el presente que he leído y comprendido las Instrucciones de',
-    'Seguridad y Confidencialidad para Personal de Visita aplicables a todas las',
-    'personas que acceden a las instalaciones de FIDAMC en calidad de visita.',
+    'Seguridad, Uso Aceptable de Sistemas de Información y Confidencialidad',
+    'para Personal Interno de FIDAMC.',
     '',
     'Me comprometo a cumplir totalmente y a no violar las presentes instrucciones.'
   ];
