@@ -610,7 +610,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     document.getElementById('frame').classList.add('hidden');
     document.getElementById('doneScreen').classList.add('show');
 
-    setTimeout(resetForm, 4000);
+    setTimeout(() => { window.location.href = '../index.html'; }, 4000);
 
   }catch(err){
     console.error(err);
@@ -622,4 +622,3 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
 </body>
 </html>
-
