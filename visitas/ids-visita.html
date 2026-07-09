@@ -587,26 +587,25 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     const ts = now.toISOString().replace(/[:.]/g,'-');
     const filename = `FIDAMC_Firma_${slugify(nombre)}_${ts}.pdf`;
 
+    // Usamos Data URL (Base64) en vez de blob URL: los blob: no son fiables
+    // dentro del WebView de Android usado por apps kiosko (Fully Kiosk, etc.),
+    // ya que el componente de descargas del sistema no puede resolver su
+    // contenido. Los Data URL sí son compatibles con ese mecanismo.
     let binary = '';
     const chunkSize = 0x8000;
     for (let i = 0; i < pdfBytes.length; i += chunkSize) {
       binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + chunkSize));
     }
     const pdfBase64 = btoa(binary);
+    const dataUrl = 'data:application/pdf;base64,' + pdfBase64;
 
+    // Si la app está corriendo dentro de Fully Kiosk Browser con la
+    // "JavaScript Interface" activada, usamos su función nativa fully.writeFile()
+    // para escribir el PDF directamente en el almacenamiento del dispositivo,
+    // evitando por completo el problema de blobs/descargas del WebView.
+    // En cualquier otro navegador (Chrome, etc.) usamos el método estándar.
     let savedNatively = false;
-
-    // 1. APK nativa (Android Studio WebView) → Android.savePDF()
-    if (typeof Android !== 'undefined' && typeof Android.savePDF === 'function') {
-      try {
-        savedNatively = Android.savePDF(filename, pdfBase64);
-      } catch (e) {
-        savedNatively = false;
-      }
-    }
-
-    // 2. Fully Kiosk Browser con JavaScript Interface → fully.writeFile()
-    if (!savedNatively && typeof fully !== 'undefined' && typeof fully.writeFile === 'function') {
+    if (typeof fully !== 'undefined' && typeof fully.writeFile === 'function') {
       try {
         const path = 'Download/' + filename;
         savedNatively = fully.writeFile(path, binary);
@@ -615,9 +614,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
       }
     }
 
-    // 3. Cualquier otro navegador (Chrome, TWA de PWABuilder) → método estándar
     if (!savedNatively) {
-      const dataUrl = 'data:application/pdf;base64,' + pdfBase64;
+      // Intento de descarga real al sistema de archivos (carpeta Download),
+      // no apertura en visor. Mantenemos el <a> en el DOM unos instantes tras
+      // el click para dar tiempo al navegador a procesar el evento de descarga
+      // antes de eliminarlo.
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = filename;
@@ -631,7 +632,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     document.getElementById('frame').classList.add('hidden');
     document.getElementById('doneScreen').classList.add('show');
 
-    setTimeout(resetForm, 4000);
+    setTimeout(() => { window.location.href = '../index.html'; }, 4000);
 
   }catch(err){
     console.error(err);
@@ -643,4 +644,3 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
 </body>
 </html>
-
