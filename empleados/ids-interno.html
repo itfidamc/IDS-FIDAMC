@@ -168,10 +168,25 @@
   .done-screen h2{ font-size:21px; margin:0 0 8px; color:var(--teal-dark); }
   .done-screen p{ font-size:14px; color:var(--muted); margin:0 0 26px; }
   .restart-note{ font-size:12px; color:var(--muted); }
+
+  .back-btn{
+    display:inline-flex; align-items:center; gap:5px;
+    background:none; border:none; cursor:pointer;
+    font-family:inherit; font-size:13px; font-weight:500;
+    color:var(--teal-dark); padding:0 0 14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .back-btn:hover{ color:var(--navy); }
+  .back-btn svg{ width:15px; height:15px; stroke:currentColor; fill:none;
+    stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 </style>
 </head>
 <body>
 
+  <button class="back-btn" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </button>
 <div class="frame" id="frame">
   <div class="header-row">
     <img class="logo" id="logoImg" alt="FIDAMC">
@@ -610,7 +625,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     document.getElementById('frame').classList.add('hidden');
     document.getElementById('doneScreen').classList.add('show');
 
-    setTimeout(() => { window.location.href = '../index.html'; }, 4000);
+    setTimeout(resetForm, 4000);
 
   }catch(err){
     console.error(err);
