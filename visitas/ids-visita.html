@@ -585,7 +585,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
     const now = new Date();
     const ts = now.toISOString().replace(/[:.]/g,'-');
-    const filename = `FIDAMC_Firma_${slugify(nombre)}_${ts}.pdf`;
+    const filename = `Visitas/FIDAMC_Firma_${slugify(nombre)}_${ts}.pdf`;
 
     // Usamos Data URL (Base64) en vez de blob URL: los blob: no son fiables
     // dentro del WebView de Android usado por apps kiosko (Fully Kiosk, etc.),
@@ -632,7 +632,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     document.getElementById('frame').classList.add('hidden');
     document.getElementById('doneScreen').classList.add('show');
 
-    setTimeout(() => { window.location.href = '../index.html'; }, 4000);
+    setTimeout(resetForm, 4000);
 
   }catch(err){
     console.error(err);
