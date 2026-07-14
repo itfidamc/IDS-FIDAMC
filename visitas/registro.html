@@ -408,8 +408,14 @@
 <script>
 // ── Configuración ─────────────────────────────────────────────────────────
 const HORA_CIERRE = '22:30';   // Hora de cierre automático de jornada
-const RUTA_CSV    = 'Registro de Entradas/registroentradas.csv';
-const CABECERA    = 'Fecha,Nombre y Apellidos,DNI,Empresa,Matrícula,Persona de contacto,Hora de entrada,Hora de salida';
+function rutaCSV(){
+  const d = new Date();
+  const fecha = d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+  return 'Registro de Entradas/registroentradas_' + fecha + '.csv';
+}
+const CABECERA    = 'Fecha;Nombre y Apellidos;DNI;Empresa;Matrícula;Persona de contacto;Hora de entrada;Hora de salida';
 
 // ── Logo ──────────────────────────────────────────────────────────────────
 const LOGO_B64 = document.getElementById('logoDataHolder').textContent.trim();
@@ -441,18 +447,18 @@ function horaActual(){
 // ── Lectura/escritura del CSV ─────────────────────────────────────────────
 function leerCSV(){
   if(typeof Android !== 'undefined' && typeof Android.readFile === 'function'){
-    const raw = Android.readFile(RUTA_CSV);
+    const raw = Android.readFile(rutaCSV());
     return raw || '';
   }
   // Fallback: localStorage para pruebas en Chrome de escritorio
-  return localStorage.getItem('registroentradas') || '';
+  return localStorage.getItem(rutaCSV()) || '';
 }
 
 function escribirCSV(contenido){
   if(typeof Android !== 'undefined' && typeof Android.writeFile === 'function'){
-    return Android.writeFile(RUTA_CSV, contenido);
+    return Android.writeFile(rutaCSV(), contenido);
   }
-  localStorage.setItem('registroentradas', contenido);
+  localStorage.setItem(rutaCSV(), contenido);
   return true;
 }
 
@@ -463,7 +469,7 @@ function parseCSV(raw){
   if(lines.length < 2) return [];
   // Salta la cabecera
   return lines.slice(1).map(line => {
-    const cols = line.split(',');
+    const cols = line.split(';');
     return {
       fecha:     cols[0] || '',
       nombre:    cols[1] || '',
@@ -479,9 +485,9 @@ function parseCSV(raw){
 
 // Serializa array de objetos a CSV
 function serializarCSV(filas){
-  const lines = [CABECERA];
+  const lines = ['\uFEFF' + CABECERA];  // BOM UTF-8 para que Excel abra correctamente
   filas.forEach(f => {
-    lines.push([f.fecha, f.nombre, f.dni, f.empresa, f.matricula, f.contacto, f.entrada, f.salida].join(','));
+    lines.push([f.fecha, f.nombre, f.dni, f.empresa, f.matricula, f.contacto, f.entrada, f.salida].join(';'));
   });
   return lines.join('\n');
 }
