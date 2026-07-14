@@ -597,7 +597,6 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
       binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + chunkSize));
     }
     const pdfBase64 = btoa(binary);
-    const dataUrl = 'data:application/pdf;base64,' + pdfBase64;
 
     // Si la app está corriendo dentro de Fully Kiosk Browser con la
     // "JavaScript Interface" activada, usamos su función nativa fully.writeFile()
